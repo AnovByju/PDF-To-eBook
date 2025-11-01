@@ -132,23 +132,14 @@
         /* Library View */
         #library-view {
             padding: 20px;
-            padding-bottom: calc(env(safe-area-inset-bottom) + 100px);
+            /* --- NEW: Padding top to avoid header bar --- */
+            padding-top: 100px;
         }
         .reader-active #library-view {
             transform: scale(0.95);
             opacity: 0;
             pointer-events: none;
         }
-
-        .library-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid var(--ui-border);
-            padding-bottom: 20px;
-            margin-bottom: 20px;
-        }
-        .library-header h2 { margin: 0; font-size: 1.8rem; }
 
         #pdf-grid {
             display: grid;
@@ -221,24 +212,38 @@
         .library-edit-mode .book-card .book-cover-img { opacity: 0.3; }
         .library-edit-mode .book-card:hover { transform: scale(1); }
         
-        /* Floating Footer Bar */
-        #library-footer-bar {
+        /* --- NEW: Floating Header Bar --- */
+        #library-header-bar {
             position: absolute;
-            bottom: 0;
+            top: 0;
             left: 0;
             right: 0;
-            padding: 15px 20px calc(env(safe-area-inset-bottom) + 15px) 20px;
+            padding: 15px 20px;
+            padding-top: calc(env(safe-area-inset-top) + 15px);
             background: var(--ui-bg);
             -webkit-backdrop-filter: blur(10px);
             backdrop-filter: blur(10px);
-            border-top: 1px solid var(--ui-border);
+            border-bottom: 1px solid var(--ui-border);
             display: flex;
-            justify-content: space-around;
+            justify-content: space-between;
             align-items: center;
             z-index: 100;
             transition: opacity 0.3s ease-out, transform 0.3s ease-out;
         }
-        .reader-active #library-footer-bar {
+        #library-header-bar h2 {
+            margin: 0;
+            font-size: 1.5rem;
+        }
+        #library-header-bar .controls {
+            display: flex;
+            gap: 10px;
+        }
+        #library-header-bar .controls button {
+            padding: 8px 12px;
+            font-size: 0.9rem;
+        }
+        
+        .reader-active #library-header-bar {
             transform: scale(0.95);
             opacity: 0;
             pointer-events: none;
@@ -277,7 +282,7 @@
             overflow: auto;
             scroll-behavior: smooth;
             /* Padding to move PDF down */
-            padding: calc(env(safe-area-inset-top) + 85px) 15px calc(env(safe-area-inset-bottom) + 85px) 15px;
+            padding: calc(env(safe-area-inset-top) + 85px) 15px 15px 15px;
             scrollbar-width: none;
         }
         #book-container::-webkit-scrollbar { display: none; }
@@ -300,44 +305,33 @@
         }
         #pdf-canvas.inverted { filter: invert(1) hue-rotate(180deg); }
         
-        /* Reader UI Bars */
-        #reader-top-bar, #reader-bottom-bar {
+        /* --- NEW: Reader UI Top Bar --- */
+        #reader-top-bar {
             position: absolute;
             left: 10px;
             right: 10px;
+            top: calc(env(safe-area-inset-top) + 10px);
             background: var(--ui-bg);
             -webkit-backdrop-filter: blur(10px);
             backdrop-filter: blur(10px);
             display: flex;
-            justify-content: space-between;
+            justify-content: space-around; /* Use space-around to spread items */
             align-items: center;
             z-index: 100;
             border-radius: 12px;
             border: 1px solid var(--ui-border);
             box-shadow: 0 4px 15px var(--shadow-color);
+            padding: 10px 15px;
         }
 
-        #reader-top-bar {
-            top: calc(env(safe-area-inset-top) + 10px);
-            padding: 10px 15px;
-        }
-        
-        #reader-bottom-bar {
-            bottom: calc(env(safe-area-inset-bottom) + 10px);
-            padding: 10px 15px;
-            justify-content: space-around;
-        }
-        
         /* Styles for buttons inside bars */
-        #reader-top-bar button,
-        #reader-bottom-bar button {
+        #reader-top-bar button {
             padding: 10px 12px;
             font-size: 0.9rem;
         }
         
-        /* Make page buttons square-ish and compact */
-        #reader-bottom-bar #reader-prev-btn,
-        #reader-bottom-bar #reader-next-btn {
+        #reader-top-bar #reader-prev-btn,
+        #reader-top-bar #reader-next-btn {
             width: 44px;
             height: 44px;
             padding: 0;
@@ -376,8 +370,14 @@
     <div class="container">
 
         <div id="library-view">
-            <div class="library-header">
+            <div id="library-header-bar">
                 <h2>My Library</h2>
+                <div class="controls">
+                    <button id="theme-toggle">Theme</button>
+                    <button id="upload-btn">Upload</button>
+                    <button id="edit-mode-toggle">Edit</button>
+                </div>
+                <input type="file" id="pdf-upload" accept="application/pdf" hidden>
             </div>
             
             <div id="pdf-grid">
@@ -385,14 +385,6 @@
             </div>
         </div>
         
-        <div id="library-footer-bar">
-            <button id="theme-toggle">Theme</button>
-            <button id="upload-btn">Upload Book</button>
-            <input type="file" id="pdf-upload" accept="application/pdf" hidden>
-            <button id="edit-mode-toggle">Edit</button>
-        </div>
-
-
         <div id="reader-view">
             
             <div id="book-container">
@@ -402,6 +394,8 @@
             
             <div id="reader-top-bar">
                 <button id="reader-back-btn">&larr; Library</button>
+                <button id="reader-prev-btn">&larr;</button>
+                <button id="reader-next-btn">&rarr;</button>
                 <button id="reader-invert-btn">Invert</button>
             </div>
             
@@ -409,11 +403,7 @@
                 Page <span id="page-num">0</span> of <span id="page-count">0</span>
             </div>
             
-            <div id="reader-bottom-bar">
-                <button id="reader-prev-btn">&larr;</button>
-                <button id="reader-next-btn">&rarr;</button>
             </div>
-        </div>
 
     </div>
 
@@ -429,7 +419,8 @@
         const themeToggle = document.getElementById('theme-toggle');
         const uploadBtn = document.getElementById('upload-btn');
         const editModeToggle = document.getElementById('edit-mode-toggle');
-        const libraryFooterBar = document.getElementById('library-footer-bar');
+        // --- NEW: Header Bar ---
+        const libraryHeaderBar = document.getElementById('library-header-bar');
         
         const readerView = document.getElementById('reader-view');
         const bookContainer = document.getElementById('book-container');
@@ -455,7 +446,7 @@
         let currentPdfDoc = null;
         let currentPageNum = 1;
         let currentPdfId = null;
-        let currentScale = 1.5; // Default scale is still 1.5
+        let currentScale = 1.5; // Default scale
         let db = null;
         let isEditMode = false;
         let isRendering = false; // Page turn/render lock

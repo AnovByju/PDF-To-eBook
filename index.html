@@ -82,7 +82,6 @@
             position: relative;
         }
 
-        /* --- UPDATED: Default button is now rounded rectangle --- */
         button, input[type="file"]::file-selector-button {
             font-family: inherit;
             font-size: 1rem;
@@ -277,8 +276,8 @@
             align-items: start;
             overflow: auto;
             scroll-behavior: smooth;
-            /* --- FIXED: Padding to clear new bars --- */
-            padding: calc(env(safe-area-inset-top) + 70px) 15px calc(env(safe-area-inset-bottom) + 90px) 15px;
+            /* Padding to move PDF down */
+            padding: calc(env(safe-area-inset-top) + 85px) 15px calc(env(safe-area-inset-bottom) + 85px) 15px;
             scrollbar-width: none;
         }
         #book-container::-webkit-scrollbar { display: none; }
@@ -301,11 +300,11 @@
         }
         #pdf-canvas.inverted { filter: invert(1) hue-rotate(180deg); }
         
-        /* --- NEW: Reader UI Bars --- */
+        /* Reader UI Bars */
         #reader-top-bar, #reader-bottom-bar {
             position: absolute;
-            left: 0;
-            right: 0;
+            left: 10px;
+            right: 10px;
             background: var(--ui-bg);
             -webkit-backdrop-filter: blur(10px);
             backdrop-filter: blur(10px);
@@ -313,39 +312,32 @@
             justify-content: space-between;
             align-items: center;
             z-index: 100;
-            /* --- NEW: Rounded rectangle bar --- */
-            margin: 10px;
             border-radius: 12px;
             border: 1px solid var(--ui-border);
             box-shadow: 0 4px 15px var(--shadow-color);
         }
 
         #reader-top-bar {
-            top: 0;
+            top: calc(env(safe-area-inset-top) + 10px);
             padding: 10px 15px;
-            padding-top: calc(env(safe-area-inset-top) + 10px);
         }
         
         #reader-bottom-bar {
-            bottom: 0;
+            bottom: calc(env(safe-area-inset-bottom) + 10px);
             padding: 10px 15px;
-            padding-bottom: calc(env(safe-area-inset-bottom) + 10px);
-            justify-content: space-around; /* Distribute buttons */
+            justify-content: space-around;
         }
         
-        /* --- NEW: Styles for buttons inside bars --- */
-        /* Make all buttons in bars smaller */
+        /* Styles for buttons inside bars */
         #reader-top-bar button,
         #reader-bottom-bar button {
             padding: 10px 12px;
             font-size: 0.9rem;
         }
         
-        /* Make zoom/page buttons square-ish and compact */
+        /* Make page buttons square-ish and compact */
         #reader-bottom-bar #reader-prev-btn,
-        #reader-bottom-bar #reader-next-btn,
-        #reader-bottom-bar #reader-zoom-in-btn,
-        #reader-bottom-bar #reader-zoom-out-btn {
+        #reader-bottom-bar #reader-next-btn {
             width: 44px;
             height: 44px;
             padding: 0;
@@ -354,13 +346,13 @@
             text-align: center;
         }
         
-        /* --- NEW: Floating Page Indicator --- */
+        /* Floating Page Indicator */
         #reader-page-indicator {
             position: absolute;
-            top: 0;
+            top: calc(env(safe-area-inset-top) + 10px);
             left: 50%;
             transform: translateX(-50%);
-            z-index: 101; /* Above top bar */
+            z-index: 101;
             background: var(--ui-bg);
             -webkit-backdrop-filter: blur(10px);
             backdrop-filter: blur(10px);
@@ -371,9 +363,6 @@
             font-variant-numeric: tabular-nums;
             box-shadow: 0 4px 15px var(--shadow-color);
             white-space: nowrap;
-            /* Apply safe area padding */
-            margin-top: calc(env(safe-area-inset-top) + 10px);
-            /* Fade out transition */
             opacity: 0;
             transition: opacity 0.5s ease-in-out;
         }
@@ -422,8 +411,6 @@
             
             <div id="reader-bottom-bar">
                 <button id="reader-prev-btn">&larr;</button>
-                <button id="reader-zoom-out-btn">-</button>
-                <button id="reader-zoom-in-btn">+</button>
                 <button id="reader-next-btn">&rarr;</button>
             </div>
         </div>
@@ -456,8 +443,7 @@
         const invertColorsBtn = document.getElementById('reader-invert-btn');
         const prevPageBtn = document.getElementById('reader-prev-btn');
         const nextPageBtn = document.getElementById('reader-next-btn');
-        const zoomInBtn = document.getElementById('reader-zoom-in-btn');
-        const zoomOutBtn = document.getElementById('reader-zoom-out-btn');
+        // --- REMOVED: Zoom buttons ---
         
         // Page Indicator
         const pageIndicator = document.getElementById('reader-page-indicator');
@@ -469,7 +455,7 @@
         let currentPdfDoc = null;
         let currentPageNum = 1;
         let currentPdfId = null;
-        let currentScale = 1.5;
+        let currentScale = 1.5; // Default scale is still 1.5
         let db = null;
         let isEditMode = false;
         let isRendering = false; // Page turn/render lock
@@ -618,7 +604,7 @@
                     currentPdfDoc = await pdfjsLib.getDocument(arrayBuffer).promise;
                     pageCountSpan.textContent = currentPdfDoc.numPages;
                     currentPageNum = parseInt(localStorage.getItem(pdfId + '_page')) || 1;
-                    currentScale = 1.5; 
+                    currentScale = 1.5; // Reset scale to default
                     bookContainer.scrollTop = 0;
                     
                     await renderPage(currentPageNum);
@@ -647,79 +633,7 @@
         }
 
         // --- Reader Functions ---
-        async function renderPage(num) {
-            if (!currentPdfDoc || isRendering) return;
-            isRendering = true;
-
-            try {
-                const page = await currentPdfDoc.getPage(num);
-                const viewport = page.getViewport({ scale: currentScale });
-
-                pdfCanvas.height = viewport.height;
-                pdfCanvas.width = viewport.width;
-
-                const renderContext = { canvasContext: canvasCtx, viewport: viewport };
-                await page.render(renderContext).promise;
-                
-                currentPageNum = num;
-                pageNumSpan.textContent = num;
-                localStorage.setItem(currentPdfId + '_page', num);
-                
-                prevPageBtn.disabled = (num <= 1);
-                nextPageBtn.disabled = (num >= currentPdfDoc.numPages);
-                
-                showPageIndicator(); // Show indicator on render
-                
-            } catch (error) {
-                console.error('Error rendering page:', error);
-            }
-            
-            bookLoader.style.display = 'none';
-            isRendering = false;
-        }
-        
-        // --- Page Turn (Fade) ---
-        async function navigatePage(direction) {
-            if (isRendering) return; // Check lock
-            
-            let newPage = currentPageNum;
-            if (direction === 'prev' && currentPageNum > 1) { newPage--; } 
-            else if (direction === 'next' && currentPageNum < currentPdfDoc.numPages) { newPage++; }
-            else { return; }
-            
-            // --- BUG FIX ---
-            // Set lock *immediately* before the timeout
-            isRendering = true; 
-            pdfCanvas.style.opacity = 0;
-            
-            setTimeout(async () => {
-                bookContainer.scrollTo({ top: 0, behavior: 'auto' });
-                // We pass the new page number. renderPage will handle the rest.
-                // We must NOT await renderPage here, as it has its own lock.
-                // We'll let renderPage handle unsetting the isRendering flag.
-                await renderPage(newPage);
-                pdfCanvas.style.opacity = 1;
-                // --- BUG FIX ---
-                // The lock is unset inside renderPage, so we don't unset it here.
-                // BUT, what if renderPage *returns* early?
-                // The lock is only unset if renderPage *completes*.
-                // Let's re-think.
-                
-                // --- CORRECTED LOGIC ---
-                // We will NOT set isRendering = true here.
-                // We will let renderPage handle its own lock.
-                // The `if (isRendering) return;` at the top is enough.
-                
-            }, 200);
-        }
-        
-        // --- RE-CORRECTED LOGIC ---
-        // The bug is that `MapsPage` STARTS an action, but `zoomIn`
-        // can be called *before* `renderPage` starts.
-        // `MapsPage` MUST set the lock, and `renderPage` must NOT.
-        
         async function renderPageInternal(num) {
-            // This is the *actual* render logic, without locks.
             if (!currentPdfDoc) return;
             
             try {
@@ -748,7 +662,7 @@
             bookLoader.style.display = 'none';
         }
 
-        // --- NEW: Wrapper functions for locking ---
+        // --- Wrapper functions for locking ---
         async function renderPage(num) {
             if (isRendering) return;
             isRendering = true;
@@ -757,25 +671,24 @@
         }
 
         async function navigatePage(direction) {
-            if (isRendering) return; // Check lock
+            if (isRendering) return;
             
             let newPage = currentPageNum;
             if (direction === 'prev' && currentPageNum > 1) { newPage--; } 
             else if (direction === 'next' && currentPageNum < currentPdfDoc.numPages) { newPage++; }
             else { return; }
             
-            isRendering = true; // SET LOCK
+            isRendering = true;
             
             pdfCanvas.style.opacity = 0;
             
             setTimeout(async () => {
                 bookContainer.scrollTo({ top: 0, behavior: 'auto' });
-                await renderPageInternal(newPage); // Call internal function
+                await renderPageInternal(newPage);
                 pdfCanvas.style.opacity = 1;
-                isRendering = false; // UNSET LOCK
+                isRendering = false;
             }, 200);
         }
-
 
         // --- Page Indicator Fade Out ---
         function showPageIndicator() {
@@ -804,18 +717,7 @@
             }
         }
         
-        // --- Zoom Functions (Fixed) ---
-        function zoomIn() {
-            if (isRendering) return;
-            currentScale += 0.2;
-            renderPage(currentPageNum); // Calls the locking wrapper
-        }
-        
-        function zoomOut() {
-            if (isRendering || currentScale <= 0.4) return;
-            currentScale -= 0.2;
-            renderPage(currentPageNum); // Calls the locking wrapper
-        }
+        // --- REMOVED: Zoom Functions ---
 
         // --- Event Listeners ---
         pdfUpload.addEventListener('change', handleFileUpload);
@@ -829,8 +731,7 @@
         });
         prevPageBtn.addEventListener('click', () => navigatePage('prev'));
         nextPageBtn.addEventListener('click', () => navigatePage('next'));
-        zoomInBtn.addEventListener('click', zoomIn);
-        zoomOutBtn.addEventListener('click', zoomOut);
+        // --- REMOVED: Zoom Listeners ---
         
         // Show page indicator on tap
         bookContainer.addEventListener('click', (e) => {
